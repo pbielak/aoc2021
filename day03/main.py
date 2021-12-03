@@ -53,6 +53,39 @@ def solve_part_one(data: Data) -> int:
     return gamma_rate * epsilon_rate
 
 
+def filter_numbers(numbers: Data, use_most_common_bit: bool) -> int:
+    current_position = 0
+
+    while len(numbers) != 1:
+        mcb = find_most_common_bits(numbers)
+
+        bit = (
+            mcb[current_position] if use_most_common_bit
+            else 1 - mcb[current_position]
+        )
+
+        numbers = [num for num in numbers if num[current_position] == bit]
+        current_position += 1
+
+    target_number = numbers[0]
+
+    return int("".join([str(d) for d in target_number]), base=2)
+
+
+def solve_part_two(data: Data) -> int:
+    oxygen_generator_rating = filter_numbers(
+        numbers=data,
+        use_most_common_bit=True,
+    )
+
+    co2_scrubber_rating = filter_numbers(
+        numbers=data,
+        use_most_common_bit=False,
+    )
+
+    return oxygen_generator_rating * co2_scrubber_rating
+
+
 def main():
     files = ["example.txt", "input.txt"]
 
@@ -62,9 +95,13 @@ def main():
         # Part 1
         solution_one = solve_part_one(data)
 
+        # Part 2
+        solution_two = solve_part_two(data)
+
         print(
             f"File: {filename}\n"
             f"* Part One: {solution_one}\n"
+            f"* Part Two: {solution_two}\n"
         )
 
 
