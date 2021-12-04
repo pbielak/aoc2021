@@ -1,6 +1,7 @@
 """Day 4 - Advent of Code"""
 from __future__ import annotations
 
+from copy import deepcopy
 import os
 from typing import List, NamedTuple
 
@@ -80,7 +81,21 @@ def solve_part_one(data: Data) -> int:
 
 
 def solve_part_two(data: Data) -> int:
-    pass
+    num_boards = len(data.boards)
+    num_winning_boards = 0
+
+    for n in data.numbers:
+        for idx, board in enumerate(data.boards):
+            if board.has_won():
+                continue
+
+            board.mark(number=n)
+
+            if board.has_won():
+                num_winning_boards += 1
+
+            if num_winning_boards == num_boards:
+                return board.sum_of_unmarked() * n
 
 
 def main():
@@ -90,10 +105,10 @@ def main():
         data = read_data(os.path.join("data", filename))
 
         # Part 1
-        solution_one = solve_part_one(data)
+        solution_one = solve_part_one(deepcopy(data))
 
         # Part 2
-        solution_two = solve_part_two(data)
+        solution_two = solve_part_two(deepcopy(data))
 
         print(
             f"File: {filename}\n"
