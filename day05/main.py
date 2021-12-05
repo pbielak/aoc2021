@@ -1,62 +1,108 @@
 """Day 5 - Advent of Code"""
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import dataclass
 import os
-from typing import Generator, List, Tuple
+from typing import Dict, Generator, List, Tuple
+
+Point2D = Tuple[int, int]
 
 
-@dataclass
-class Line:
-    x1: int
-    y1: int
-    x2: int
-    y2: int
+class Line(ABC):
 
-    def get_points(self) -> Generator[Tuple[int, int], None, None]:
-        x1, x2 = self.x1, self.x2
+    @staticmethod
+    def from_string(line: str) -> Line:
+        start, end = line.split(" -> ")
 
-        if x1 > x2:
-            x1, x2 = x2, x1
+        x1, y1 = start.split(",")
+        x2, y2 = end.split(",")
 
-        y1, y2 = self.y1, self.y2
+        if y1 == y2:
+            return HorizontalLine(x1=int(x1), x2=int(x2), y=int(y1))
+        elif x1 == x2:
+            return VerticalLine(x=int(x1), y1=int(y1), y2=int(y2))
+        else:
+            return DiagonalLine(x1=int(x1), y1=int(y1), x2=int(x2), y2=int(y2))
 
-        if y1 > y2:
-            y1, y2 = y2, y1
+    @abstractmethod
+    def get_points(self) -> Generator[Point2D, None, None]:
+        pass
 
-        for x in range(x1, x2 + 1):
-            for y in range(y1, y2 + 1):
-                yield x, y
+
+def custom_range(start: int, end: int) -> List[int]:
+    """Handles cases where `start` > `end`."""
+    if start < end:
+        return list(range(start, end + 1))
+    else:
+        return list(reversed(range(end, start + 1)))
+
+
+class HorizontalLine(Line):
+
+    def __init__(self, x1: int, x2: int, y: int):
+        self.x1 = x1
+        self.x2 = x2
+        self.y = y
+
+    def get_points(self) -> Generator[Point2D, None, None]:
+        for x in custom_range(self.x1, self.x2):
+            yield x, self.y
+
+
+class VerticalLine(Line):
+
+    def __init__(self, x: int, y1: int, y2: int):
+        self.x = x
+        self.y1 = y1
+        self.y2 = y2
+
+    def get_points(self) -> Generator[Point2D, None, None]:
+        for y in custom_range(self.y1, self.y2):
+            yield self.x, y
+
+
+class DiagonalLine(Line):
+
+    def __init__(self, x1: int, y1: int, x2: int, y2: int):
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+
+    def get_points(self) -> Generator[Point2D, None, None]:
+        xs = custom_range(self.x1, self.x2)
+        ys = custom_range(self.y1, self.y2)
+
+        for x, y in zip(xs, ys):
+            yield x, y
 
 
 Data = List[Line]
 
 
 def read_data(filename: str) -> Data:
-    data = []
     with open(filename, "r") as fin:
-        for line in fin.readlines():
-            start, end = line.strip().split(" -> ")
-
-            x1, y1 = start.split(",")
-            x2, y2 = end.split(",")
-
-            data.append(Line(x1=int(x1), y1=int(y1), x2=int(x2), y2=int(y2)))
-
-    return data
+        return [
+            Line.from_string(line.strip())
+            for line in fin.readlines()
+        ]
 
 
-def solve_part_one(data: Data) -> int:
+def get_point_count_grid(data: List[Line]) -> Dict[Point2D, int]:
     num_lines_at_point = defaultdict(int)
 
     for line in data:
-        # Consider only horizontal and vertical lines
-        if (line.x1 == line.x2) or (line.y1 == line.y2):
-            for x, y in line.get_points():
-                num_lines_at_point[(x, y)] += 1
-    solution = 0
+        for x, y in line.get_points():
+            num_lines_at_point[(x, y)] += 1
 
+    return num_lines_at_point
+
+
+def num_points_where_at_least_two_lines(data: List[Line]) -> int:
+    num_lines_at_point = get_point_count_grid(data)
+
+    solution = 0
     for num_lines in num_lines_at_point.values():
         if num_lines >= 2:
             solution += 1
@@ -64,8 +110,15 @@ def solve_part_one(data: Data) -> int:
     return solution
 
 
+def solve_part_one(data: Data) -> int:
+    return num_points_where_at_least_two_lines([
+        line for line in data
+        if isinstance(line, (HorizontalLine, VerticalLine))
+    ])
+
+
 def solve_part_two(data: Data) -> int:
-    pass
+    return num_points_where_at_least_two_lines(data)
 
 
 def main():
