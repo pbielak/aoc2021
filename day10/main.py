@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 Data = List[str]
 
@@ -22,7 +22,7 @@ def matches(opening_character: str, closing_character: str) -> bool:
     return (opening_character, closing_character) in allowed_pairs
 
 
-def find_first_illegal_character(line: str) -> Optional[str]:
+def parse(line: str) -> Tuple[List[str], Optional[str]]:
     stack = []
 
     for c in line:
@@ -32,9 +32,10 @@ def find_first_illegal_character(line: str) -> Optional[str]:
             opening_c = stack.pop(-1)
 
             if not matches(opening_c, c):
-                return c
+                return stack, c
 
-    return None
+    # Could be either valid expression or incomplete
+    return stack, None
 
 
 def solve_part_one(data: Data) -> int:
@@ -43,14 +44,47 @@ def solve_part_one(data: Data) -> int:
     total_syntax_error_score = 0
 
     for line in data:
-        illegal_character = find_first_illegal_character(line)
+        _, illegal_character = parse(line)
         total_syntax_error_score += scores[illegal_character]
 
     return total_syntax_error_score
 
 
+def autocomplete(stack: List[str]) -> List[str]:
+    complementary_characters = {"(": ")", "[": "]", "{": "}", "<": ">"}
+
+    return [complementary_characters[c] for c in stack[::-1]]
+
+
+def compute_autocomplete_score(missing_characters: List[str]) -> int:
+    scores = {")": 1, "]": 2, "}": 3, ">": 4}
+
+    total_score = 0
+
+    for c in missing_characters:
+        total_score = total_score * 5 + scores[c]
+
+    return total_score
+
+
 def solve_part_two(data: Data) -> int:
-    pass
+    autocomplete_scores = []
+
+    for line in data:
+        stack, illegal_character = parse(line)
+
+        if illegal_character is not None:
+            continue
+
+        if len(stack) > 0:  # Incomplete
+            missing_characters = autocomplete(stack)
+            autocomplete_scores.append(
+                compute_autocomplete_score(missing_characters)
+            )
+
+    mid_index = len(autocomplete_scores) // 2
+    final_score = sorted(autocomplete_scores)[mid_index]
+    return final_score
 
 
 def main():
@@ -62,7 +96,7 @@ def main():
         # Test cases
         if filename == "example.txt":
             assert solve_part_one(data) == 26_397
-            assert solve_part_two(data) == None
+            assert solve_part_two(data) == 288_957
 
         # Part 1
         solution_one = solve_part_one(data)
