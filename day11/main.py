@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import os
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 Data = List[List[int]]
 Position = Tuple[int, int]
@@ -105,7 +105,13 @@ def solve_part_one(data: Data) -> int:
 
 
 def solve_part_two(data: Data) -> int:
-    pass
+    step = 0
+    while True:
+        data, num_flashes = simulate_single_step(data)
+        step += 1
+
+        if num_flashes == 100:
+            return step
 
 
 def run_tests():
@@ -139,7 +145,7 @@ def main():
         # Test cases
         if filename == "example.txt":
             assert solve_part_one(data) == 1_656
-            assert solve_part_two(data) == None
+            assert solve_part_two(data) == 195
 
         # Part 1
         solution_one = solve_part_one(data)
