@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import os
-from typing import List, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 Cave = str
 Edge = Tuple[Cave, Cave]
 Data = List[Edge]
+Path = Tuple[Cave, ...]
 
 
 def read_data(filename: str) -> Data:
@@ -23,7 +24,7 @@ def is_small_cave(cave: str) -> bool:
     return cave.lower() == cave
 
 
-def generate_all_paths(edges: Data) -> List[Tuple[str, ...]]:
+def get_caves_after_start(edges: Data) -> Set[Cave]:
     caves_after_start = set()
 
     for edge in edges:
@@ -32,29 +33,79 @@ def generate_all_paths(edges: Data) -> List[Tuple[str, ...]]:
         elif edge[1] == "start":
             caves_after_start.add(edge[0])
 
+    return caves_after_start
+
+
+def get_all_small_caves(edges: Data) -> Set[Cave]:
+    small_caves = set()
+
+    for edge in edges:
+        if is_small_cave(edge[0]) and edge[0] not in ("start", "end"):
+            small_caves.add(edge[0])
+        elif is_small_cave(edge[1]) and edge[1] not in ("start", "end"):
+            small_caves.add(edge[1])
+
+    return small_caves
+
+
+def generate_all_paths(
+    edges: Data,
+    allow_visit_small_cave_twice: bool = False,
+) -> List[Path]:
+    caves_after_start = get_caves_after_start(edges)
+
+    if allow_visit_small_cave_twice:
+        allowed_small_caves = get_all_small_caves(edges)
+    else:
+        allowed_small_caves = {None}
+
     paths = []
 
     for cave in caves_after_start:
-        if is_small_cave(cave):
-            avsc = (cave,)
-        else:
-            avsc = ()
+        for allowed_small_cave in allowed_small_caves:
+            if is_small_cave(cave):
+                avsc = {cave: 1}
+            else:
+                avsc = {}
 
-        ps = generate_path_recursively(
-            edges=edges,
-            current_path=("start", cave),
-            already_visited_small_caves=avsc,
-        )
-        paths.extend(ps)
+            ps = generate_path_recursively(
+                edges=edges,
+                current_path=("start", cave),
+                already_visited_small_caves=avsc,
+                small_cave_can_be_visited_twice=allowed_small_cave,
+            )
+            paths.extend(ps)
+
+    paths = list(set(paths))
 
     return paths
 
 
+def can_be_visited(
+    cave: Cave,
+    already_visited_small_caves: Dict[Cave, int],
+    small_cave_can_be_visited_twice: Optional[Cave],
+) -> bool:
+    if cave == "start":
+        return False
+
+    num_visited = already_visited_small_caves.get(cave, 0)
+
+    if small_cave_can_be_visited_twice is None:
+        return num_visited == 0
+    else:
+        if cave == small_cave_can_be_visited_twice:
+            return num_visited in (0, 1)
+        else:
+            return num_visited == 0
+
+
 def generate_path_recursively(
     edges: Data,
-    current_path: Tuple[str, ...],
-    already_visited_small_caves: Tuple[str, ...],
-) -> List[Tuple[str, ...]]:
+    current_path: Path,
+    already_visited_small_caves: Dict[Cave, int],
+    small_cave_can_be_visited_twice: Optional[Cave],
+) -> List[Path]:
     last_cave = current_path[-1]
     next_possible_caves = set()
 
@@ -62,15 +113,17 @@ def generate_path_recursively(
         # Consider edges like `(last_cave, *)`
         if (
             (last_cave == edge[0])
-            and (edge[1] not in already_visited_small_caves)
-            and (edge[1] != "start")
+            and can_be_visited(edge[1], already_visited_small_caves=already_visited_small_caves, small_cave_can_be_visited_twice=small_cave_can_be_visited_twice)
+            #and (edge[1] not in already_visited_small_caves)
+            #and (edge[1] != "start")
         ):
             next_possible_caves.add(edge[1])
         # Consider edges like `(*, last_cave)`
         elif (
             (last_cave == edge[1])
-            and (edge[0] not in already_visited_small_caves)
-            and (edge[0] != "start")
+            and can_be_visited(edge[0], already_visited_small_caves=already_visited_small_caves, small_cave_can_be_visited_twice=small_cave_can_be_visited_twice)
+            #and (edge[0] not in already_visited_small_caves)
+            #and (edge[0] != "start")
         ):
             next_possible_caves.add(edge[0])
 
@@ -81,7 +134,11 @@ def generate_path_recursively(
             continue
 
         if is_small_cave(next_cave):
-            avsc = (*already_visited_small_caves, next_cave)
+            if small_cave_can_be_visited_twice is None:
+                avsc = {**already_visited_small_caves, next_cave: 1}
+            else:
+                avsc = already_visited_small_caves.copy()
+                avsc[next_cave] = avsc.get(next_cave, 0) + 1
         else:
             avsc = already_visited_small_caves
 
@@ -90,6 +147,7 @@ def generate_path_recursively(
                 edges=edges,
                 current_path=(*current_path, next_cave),
                 already_visited_small_caves=avsc,
+                small_cave_can_be_visited_twice=small_cave_can_be_visited_twice,
             )
         )
 
@@ -102,7 +160,11 @@ def solve_part_one(data: Data) -> int:
 
 
 def solve_part_two(data: Data) -> int:
-    pass
+    all_paths = generate_all_paths(
+        edges=data,
+        allow_visit_small_cave_twice=True,
+    )
+    return len(all_paths)
 
 
 def run_tests():
@@ -175,6 +237,25 @@ def run_tests():
     assert all(path in mini_example_2_expected for path in mini_example_2_res)
     print("Mini example 2 test passed ...")
 
+    # Part 2
+    print("Part 2 - tests")
+
+    # Mini example 1
+    mini_example_1_res_p2 = generate_all_paths(
+        edges=mini_example_1,
+        allow_visit_small_cave_twice=True,
+    )
+    assert len(mini_example_1_res_p2) == 36
+    print("Mini example 1 test passed ...")
+
+    # Mini example 2
+    mini_example_2_res_p2 = generate_all_paths(
+        edges=mini_example_2,
+        allow_visit_small_cave_twice=True,
+    )
+    assert len(mini_example_2_res_p2) == 103
+    print("Mini example 2 test passed ...")
+
 
 def main():
     run_tests()
@@ -187,7 +268,7 @@ def main():
         # Test cases
         if filename == "example.txt":
             assert solve_part_one(data) == 226
-            assert solve_part_two(data) == None
+            assert solve_part_two(data) == 3_509
 
         # Part 1
         solution_one = solve_part_one(data)
