@@ -253,7 +253,20 @@ def solve_part_one(data: Data) -> int:
 
 
 def solve_part_two(data: Data) -> int:
-    pass
+    largest_magnitude = 0
+
+    for i in range(len(data)):
+        for j in range(len(data)):
+            if i != j:
+                a = parse(data[i])
+                b = parse(data[j])
+
+                magnitude = (a + b).reduce().magnitude()
+
+                if magnitude > largest_magnitude:
+                    largest_magnitude = magnitude
+
+    return largest_magnitude
 
 
 def run_tests():
@@ -375,8 +388,8 @@ def main():
 
         # Test cases
         if filename == "example.txt":
-            assert solve_part_one(data) == 4140
-            assert solve_part_two(data) == None
+            assert solve_part_one(data) == 4_140
+            assert solve_part_two(data) == 3_993
 
         # Part 1
         solution_one = solve_part_one(data)
