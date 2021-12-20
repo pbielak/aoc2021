@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from typing import Callable, Dict, Generator, List, NamedTuple, Optional, Tuple, Union
+from typing import List, NamedTuple, Tuple
 
 Image = List[str]
 
@@ -70,14 +70,13 @@ def compute_new_background(current_background: str, lookup: str) -> str:
     return lookup[idx]
 
 
-def solve_part_one(data: Data) -> int:
-    steps = 2
+def enhance_for(data: Data, num_steps: int) -> int:
     lookup = data.enhancement_lookup
 
     background = "."
     image = data.image
 
-    for step in range(steps):
+    for _ in range(num_steps):
         image = add_background(image, background, delta=2)
         image = enhance_image(image, lookup)
         background = compute_new_background(background, lookup)
@@ -90,8 +89,12 @@ def solve_part_one(data: Data) -> int:
     return num_lit_pixels
 
 
+def solve_part_one(data: Data) -> int:
+    return enhance_for(data, num_steps=2)
+
+
 def solve_part_two(data: Data) -> int:
-    pass
+    return enhance_for(data, num_steps=50)
 
 
 def main():
@@ -103,7 +106,7 @@ def main():
         # Test cases
         if filename == "example.txt":
             assert solve_part_one(data) == 35
-            assert solve_part_two(data) == None
+            assert solve_part_two(data) == 3351
 
         # Part 1
         solution_one = solve_part_one(data)
